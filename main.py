@@ -11,7 +11,7 @@ DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis
 
 @st.cache_data
 def load_data(url: str) -> pd.DataFrame:
-    df = pd.read_csv(url, dtype=str)          # 모든 열을 문자열로 먼저 읽기
+    df = pd.read_csv(url, dtype=str)
 
     # 열 이름 공백 제거
     df.columns = df.columns.str.strip()
@@ -19,7 +19,7 @@ def load_data(url: str) -> pd.DataFrame:
     # 날짜 변환 (YYYYMMDD → datetime)
     df["날짜"] = pd.to_datetime(df["날짜"], format="%Y%m%d")
 
-    # 숫자 열 변환 (쉼표 제거 후 정수형)
+    # 숫자 열 변환 (쉼표 제거 후 float형)
     num_cols = ["순위", "일관객", "누적관객", "스크린수", "상영횟수"]
     for col in num_cols:
         if col in df.columns:
@@ -27,7 +27,7 @@ def load_data(url: str) -> pd.DataFrame:
                 df[col]
                 .str.replace(",", "", regex=False)
                 .str.strip()
-                .astype(float)       # float 먼저 (NaN 허용)
+                .astype(float)
             )
 
     return df
@@ -42,7 +42,6 @@ st.markdown("---")
 
 # ══════════════════════════════════════════════════════════════
 # 그래프 1 – 관객 수 × 스크린수 / 상영횟수 상관관계
-# (데이터에 장르 열이 없으므로 스크린수·상영횟수로 대체)
 # ══════════════════════════════════════════════════════════════
 st.subheader("📊 그래프 1 : 관객 수와 상영 규모의 상관관계")
 st.caption(
@@ -50,24 +49,24 @@ st.caption(
     "장르 데이터가 추가되면 쉽게 교체할 수 있습니다."
 )
 
+# 영화별 평균 집계
+agg = (
+    df.groupby("영화명")[["스크린수", "상영횟수", "일관객", "누적관객"]]
+    .mean()
+    .reset_index()
+    .rename(columns={
+        "스크린수": "평균스크린수",
+        "상영횟수": "평균상영횟수",
+        "일관객":  "평균일관객",
+        "누적관객": "평균누적관객",
+    })
+)
+
 col1, col2 = st.columns(2)
 
 # ── 서브그래프 1-A : 스크린수 vs 일관객 ───────────────────────
 with col1:
     st.markdown("#### 스크린수 vs 일관객")
-
-    # 영화별 평균 집계
-    agg = (
-        df.groupby("영화명")[["스크린수", "상영횟수", "일관객", "누적관객"]]
-        .mean()
-        .reset_index()
-        .rename(columns={
-            "스크린수": "평균스크린수",
-            "상영횟수": "평균상영횟수",
-            "일관객":  "평균일관객",
-            "누적관객": "평균누적관객",
-        })
-    )
 
     fig1a = px.scatter(
         agg,
@@ -78,7 +77,7 @@ with col1:
         size_max=40,
         color="평균일관객",
         color_continuous_scale="Blues",
-        trendline="ols",          # 추세선
+        trendline="lowess",        # ← ols → lowess 로 변경 (statsmodels 불필요)
         labels={
             "평균스크린수": "평균 스크린수 (개)",
             "평균일관객":  "평균 일관객 (명)",
@@ -101,7 +100,7 @@ with col2:
         size_max=40,
         color="평균일관객",
         color_continuous_scale="Oranges",
-        trendline="ols",
+        trendline="lowess",        # ← ols → lowess 로 변경 (statsmodels 불필요)
         labels={
             "평균상영횟수": "평균 상영횟수 (회)",
             "평균일관객":  "평균 일관객 (명)",
@@ -123,7 +122,7 @@ st.dataframe(corr_df, use_container_width=True)
 st.markdown("---")
 
 # ══════════════════════════════════════════════════════════════
-# 그래프 2 – 날짜별 총 일관객 추이 (보너스)
+# 그래프 2 – 날짜별 총 일관객 추이
 # ══════════════════════════════════════════════════════════════
 st.subheader("📈 그래프 2 : 날짜별 전체 일관객 추이")
 
