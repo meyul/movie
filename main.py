@@ -162,16 +162,86 @@ st.divider()
 
 
 # ──────────────────────────────────────────
-# 그래프 3 : (추후 추가 예정)
+# 그래프 3 : 날짜별 10위권 일관객 합계 (영역 그래프)
 # ──────────────────────────────────────────
-st.header("📊 그래프 3 — (추후 추가 예정)")
-st.markdown("여기에 세 번째 그래프와 설명을 추가하세요.")
+st.header("📊 그래프 3 — 날짜별 박스오피스 10위권 일관객 합계")
+st.markdown("매일 10위권 영화의 일관객을 모두 더한 값입니다.  \n"
+            "전체 극장가가 가장 뜨거웠던 날이 언제인지 확인해 보세요.")
 
-# ── 그래프 코드를 아래에 작성하세요 ──
+# 날짜별 일관객 합계
+daily_total = (
+    df.groupby("날짜")["일관객"]
+    .sum()
+    .reset_index()
+    .rename(columns={"일관객": "일관객합계"})
+    .sort_values("날짜")
+)
 
+# 합계 TOP 3 날짜
+top3_days = daily_total.nlargest(3, "일관객합계")
 
-# ▶ '이 그래프로 알 수 있는 것' 문구 자리 (작성 후 주석 해제)
-# st.info("💡 이 그래프로 알 수 있는 것: ...")
+fig3 = px.area(
+    daily_total,
+    x="날짜",
+    y="일관객합계",
+    title="날짜별 박스오피스 10위권 일관객 합계",
+    labels={"날짜": "날짜", "일관객합계": "일관객 합계 (명)"},
+    color_discrete_sequence=["#457B9D"],
+)
+
+fig3.update_traces(
+    hovertemplate="날짜: %{x|%Y-%m-%d}<br>일관객 합계: %{y:,}명<extra></extra>",
+    line=dict(width=1.5),
+)
+
+# TOP 3 날짜 수직선 + 날짜 라벨 추가
+colors = ["#E63946", "#F4A261", "#2A9D8F"]   # 1위·2위·3위 색상
+
+for i, (_, row) in enumerate(top3_days.iterrows()):
+    date_str = row["날짜"].strftime("%Y-%m-%d")
+    y_val    = row["일관객합계"]
+
+    # 수직 점선
+    fig3.add_vline(
+        x=row["날짜"].value / 1e6,   # Plotly 내부 timestamp (ms)
+        line_width=2,
+        line_dash="dash",
+        line_color=colors[i],
+    )
+
+    # 날짜 + 순위 라벨
+    fig3.add_annotation(
+        x=row["날짜"],
+        y=y_val,
+        text=f"  {i+1}위<br>{date_str}",
+        showarrow=True,
+        arrowhead=2,
+        arrowcolor=colors[i],
+        arrowwidth=2,
+        ax=30,
+        ay=-50,
+        font=dict(size=12, color=colors[i], family="Arial Black"),
+        bgcolor="rgba(255,255,255,0.75)",
+        bordercolor=colors[i],
+        borderwidth=1.5,
+        borderpad=4,
+    )
+
+fig3.update_layout(
+    hovermode="x unified",
+    xaxis_title="날짜",
+    yaxis_title="일관객 합계 (명)",
+    title_font_size=18,
+    height=500,
+)
+
+st.plotly_chart(fig3, use_container_width=True)
+
+st.info(
+    "💡 이 그래프로 알 수 있는 것: "
+    "연휴·주말·대작 개봉일 등 특정 시점에 전체 극장 관객이 급증하는 패턴을 파악하고, "
+    "한 해 중 극장가가 가장 붐볐던 날이 언제인지 확인할 수 있습니다."
+)
 
 st.divider()
 
