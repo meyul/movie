@@ -29,7 +29,7 @@ def load_data(url: str) -> pd.DataFrame:
     df.columns = df.columns.str.strip()
 
     # 날짜 열을 진짜 datetime으로 변환 (여덟 자리 숫자 → YYYY-MM-DD)
-    date_col = df.columns[0]          # 첫 번째 열 = 날짜
+    date_col = df.columns[0]
     df[date_col] = pd.to_datetime(df[date_col].astype(str), format="%Y%m%d")
     df = df.rename(columns={date_col: "날짜"})
 
@@ -95,7 +95,6 @@ fig1.update_layout(
 
 st.plotly_chart(fig1, use_container_width=True)
 
-# ▶ '이 그래프로 알 수 있는 것' 문구 자리
 st.info(
     "💡 이 그래프로 알 수 있는 것: "
     "선택한 영화가 개봉 이후 날짜에 따라 관객 수가 어떻게 변화했는지(급상승·완만한 하락 등 흥행 패턴)를 한눈에 파악할 수 있습니다."
@@ -105,16 +104,59 @@ st.divider()
 
 
 # ──────────────────────────────────────────
-# 그래프 2 : (추후 추가 예정)
+# 그래프 2 : 흥행 TOP 5 영화 일관객 비교
 # ──────────────────────────────────────────
-st.header("📊 그래프 2 — (추후 추가 예정)")
-st.markdown("여기에 두 번째 그래프와 설명을 추가하세요.")
+st.header("📊 그래프 2 — 흥행 TOP 5 영화 일관객 비교")
+st.markdown("이 기간 일관객 합계가 가장 많은 **5편**의 날짜별 일관객을 한 화면에서 비교합니다.  \n"
+            "오른쪽 범례의 영화 이름을 **클릭**하면 켜고 끌 수 있습니다.")
 
-# ── 그래프 코드를 아래에 작성하세요 ──
+# 일관객 합계 기준 TOP 5 영화 선정
+top5_movies = (
+    df.groupby("영화명")["일관객"]
+    .sum()
+    .sort_values(ascending=False)
+    .head(5)
+    .index.tolist()
+)
 
+top5_df = df[df["영화명"].isin(top5_movies)].sort_values("날짜")
 
-# ▶ '이 그래프로 알 수 있는 것' 문구 자리 (작성 후 주석 해제)
-# st.info("💡 이 그래프로 알 수 있는 것: ...")
+fig2 = px.line(
+    top5_df,
+    x="날짜",
+    y="일관객",
+    color="영화명",
+    markers=True,
+    title="흥행 TOP 5 영화 — 날짜별 일관객 비교",
+    labels={"날짜": "날짜", "일관객": "일관객 수 (명)", "영화명": "영화"},
+    color_discrete_sequence=px.colors.qualitative.Bold,
+)
+
+fig2.update_traces(
+    hovertemplate="날짜: %{x|%Y-%m-%d}<br>일관객: %{y:,}명<extra></extra>"
+)
+
+fig2.update_layout(
+    hovermode="x unified",
+    xaxis_title="날짜",
+    yaxis_title="일관객 수 (명)",
+    title_font_size=18,
+    height=500,
+    legend=dict(
+        title="영화 (클릭으로 켜기/끄기)",
+        bgcolor="rgba(255,255,255,0.7)",
+        bordercolor="lightgrey",
+        borderwidth=1,
+    ),
+)
+
+st.plotly_chart(fig2, use_container_width=True)
+
+st.info(
+    "💡 이 그래프로 알 수 있는 것: "
+    "흥행 상위 5편의 개봉 시점과 관객 집중 기간이 서로 겹치는지, "
+    "어떤 영화가 단기 폭발형인지 장기 흥행형인지 한눈에 비교할 수 있습니다."
+)
 
 st.divider()
 
